@@ -5,11 +5,25 @@ import spotipy.util
 
 import apiclient.discovery
 
+import youtube_dl
+
 import config
+
+def downloadSong(url):
+  ydl_opts = {
+    'format': 'bestaudio/best',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],
+  }
+  with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    ydl.download([url])
 
 def youtubeSearch(query):
   youtube = apiclient.discovery.build('youtube','v3',developerKey=config.dev_key)
-  search_response = youtube.search().list(maxResults=4,part="id,snippet",q=query).execute()
+  search_response = youtube.search().list(maxResults=1,part="id,snippet",q=query).execute()
   urls = []
   for search_result in search_response.get("items", []):
       if search_result["id"]["kind"] == "youtube#video":
@@ -28,7 +42,7 @@ def getLibrary():
     return None
   sp = spotipy.Spotify(auth=token)
   offset = 0
-  results = sp.current_user_saved_tracks(20, offset)
+  results = sp.current_user_saved_tracks(5, offset)
   library = results
   '''
   while len(results['items']) == 20:
@@ -43,7 +57,6 @@ library = getLibrary()
 for item in library['items']:
   track = item['track']
   query = track['name'] + ' by ' + track['artists'][0]['name']
-  print(query)
   urls = youtubeSearch(query)
   for url in urls:
-    print(url)
+    downloadSong(url)
