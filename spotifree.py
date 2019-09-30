@@ -9,12 +9,46 @@ import youtube_dl
 
 import mutagen.mp3
 
+import urllib.request
+
 import config
 
-def addToCollection(title, artist):
-  mp3file = mutagen.mp3.MP3('temp.mp3',ID3=mutagen.easyid3.EasyID3)
-  mp3file['title'] = title
-  mp3file['artist'] = artist
+def downloadArt(track):
+  paths = []
+  for image in track['album']['images']:
+    paths.append(track['album']['name'] + str(image['height']) + ".jpg")
+    urllib.request.urlretrieve(image['url'], paths[-1])
+  return paths
+
+def addToCollection(title, artist, album):
+  mp3file = mutagen.mp3.MP3('temp.mp3',ID3=mutagen.id3.ID3)
+  mp3file.tags.add(
+    mutagen.id3.TIT2(
+      encoding=3,
+      text=title
+    )
+  )
+  mp3file.tags.add(
+    mutagen.id3.TPE1(
+      encoding=3,
+      text=artist
+    )
+  )
+  mp3file.tags.add(
+    mutagen.id3.TALB(
+      encoding=3,
+      text=album
+    )
+  )
+  mp3file.tags.add(
+    mutagen.id3.APIC(
+        encoding=3, # 3 is for utf-8
+        mime='image/jpeg', # image/jpeg or image/png
+        type=3, # 3 is for the cover image
+        desc=u'Cover',
+        data=open('temp.jpg','rb').read()
+    )
+  )
   mp3file.save()
 
 def downloadSong(url):
@@ -67,8 +101,10 @@ for item in library['items']:
   track = item['track']
   title = track['name']
   artist = track['artists'][0]['name']
+  album = track['album']['name']
   query = title + ' by ' + artist
   urls = youtubeSearch(query)
   for url in urls:
     downloadSong(url)
-    addToCollection(title, artist)
+    paths = downloadArt(track)
+    addToCollection(title, artist, album)
