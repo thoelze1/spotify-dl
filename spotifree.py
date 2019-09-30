@@ -7,15 +7,24 @@ import apiclient.discovery
 
 import youtube_dl
 
+import mutagen.mp3
+
 import config
+
+def addToCollection(title, artist):
+  mp3file = mutagen.mp3.MP3('temp.mp3',ID3=mutagen.easyid3.EasyID3)
+  mp3file['title'] = title
+  mp3file['artist'] = artist
+  mp3file.save()
 
 def downloadSong(url):
   ydl_opts = {
     'format': 'bestaudio/best',
+    'outtmpl': 'temp.%(ext)s',
     'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
+      'key': 'FFmpegExtractAudio',
+      'preferredcodec': 'mp3',
+      'preferredquality': '192',
     }],
   }
   with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -42,7 +51,7 @@ def getLibrary():
     return None
   sp = spotipy.Spotify(auth=token)
   offset = 0
-  results = sp.current_user_saved_tracks(5, offset)
+  results = sp.current_user_saved_tracks(1, offset)
   library = results
   '''
   while len(results['items']) == 20:
@@ -56,7 +65,10 @@ library = getLibrary()
 
 for item in library['items']:
   track = item['track']
-  query = track['name'] + ' by ' + track['artists'][0]['name']
+  title = track['name']
+  artist = track['artists'][0]['name']
+  query = title + ' by ' + artist
   urls = youtubeSearch(query)
   for url in urls:
     downloadSong(url)
+    addToCollection(title, artist)
