@@ -25,7 +25,7 @@ def downloadArt(track):
       bestimg = image
   urllib.request.urlretrieve(bestimg['url'], 'temp.jpg')
 
-def addToCollection(title, artist, album):
+def addToCollection(title, artist, album, trackno):
   mp3file = mutagen.mp3.MP3('temp.mp3',ID3=mutagen.id3.ID3)
   mp3file.tags.add(
     mutagen.id3.TIT2(
@@ -43,6 +43,12 @@ def addToCollection(title, artist, album):
     mutagen.id3.TALB(
       encoding=3,
       text=album
+    )
+  )
+  mp3file.tags.add(
+    mutagen.id3.TRCK(
+      encoding=3,
+      text=trackno
     )
   )
   mp3file.tags.add(
@@ -111,8 +117,9 @@ for item in library['items']:
   title = track['name']
   artist = track['artists'][0]['name']
   album = track['album']['name']
+  trackno = str(track['track_number'])
   query = title + ' by ' + artist
   url = youtubeSearch(query)
   downloadSong(url)
   downloadArt(track)
-  addToCollection(title, artist, album)
+  addToCollection(title, artist, album, trackno)
