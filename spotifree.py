@@ -11,14 +11,19 @@ import mutagen.mp3
 
 import urllib.request
 
+import os
+
 import config
 
 def downloadArt(track):
-  paths = []
-  for image in track['album']['images']:
-    paths.append(track['album']['name'] + str(image['height']) + ".jpg")
-    urllib.request.urlretrieve(image['url'], paths[-1])
-  return paths
+  images = track['album']['images']
+  maxh = 0
+  bestimg = 0
+  for image in images:
+    if image['height'] > maxh:
+      maxh = image['height']
+      bestimg = image
+  urllib.request.urlretrieve(bestimg['url'], 'temp.jpg')
 
 def addToCollection(title, artist, album):
   mp3file = mutagen.mp3.MP3('temp.mp3',ID3=mutagen.id3.ID3)
@@ -50,6 +55,10 @@ def addToCollection(title, artist, album):
     )
   )
   mp3file.save()
+  path = 'music/' + artist + '/' + album
+  if not os.path.exists(path):
+    os.makedirs(path)
+  os.rename('temp.mp3', path + '/' + title + '.mp3')
 
 def downloadSong(url):
   ydl_opts = {
@@ -66,12 +75,12 @@ def downloadSong(url):
 
 def youtubeSearch(query):
   youtube = apiclient.discovery.build('youtube','v3',developerKey=config.dev_key)
-  search_response = youtube.search().list(maxResults=1,part="id,snippet",q=query).execute()
+  search_response = youtube.search().list(maxResults=4,part="id,snippet",q=query).execute()
   urls = []
   for search_result in search_response.get("items", []):
       if search_result["id"]["kind"] == "youtube#video":
           urls.append("%s" % ("http://youtu.be/" + search_result["id"]["videoId"]))
-  return urls
+  return urls[0]
 
 def getLibrary():
   token = spotipy.util.prompt_for_user_token(
@@ -85,7 +94,7 @@ def getLibrary():
     return None
   sp = spotipy.Spotify(auth=token)
   offset = 0
-  results = sp.current_user_saved_tracks(1, offset)
+  results = sp.current_user_saved_tracks(10, offset)
   library = results
   '''
   while len(results['items']) == 20:
@@ -103,8 +112,7 @@ for item in library['items']:
   artist = track['artists'][0]['name']
   album = track['album']['name']
   query = title + ' by ' + artist
-  urls = youtubeSearch(query)
-  for url in urls:
-    downloadSong(url)
-    paths = downloadArt(track)
-    addToCollection(title, artist, album)
+  url = youtubeSearch(query)
+  downloadSong(url)
+  downloadArt(track)
+  addToCollection(title, artist, album)
