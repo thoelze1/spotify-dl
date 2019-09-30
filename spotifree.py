@@ -3,7 +3,18 @@
 import spotipy
 import spotipy.util
 
+import apiclient.discovery
+
 import config
+
+def youtubeSearch(query):
+  youtube = apiclient.discovery.build('youtube','v3',developerKey=config.dev_key)
+  search_response = youtube.search().list(maxResults=4,part="id,snippet",q=query).execute()
+  urls = []
+  for search_result in search_response.get("items", []):
+      if search_result["id"]["kind"] == "youtube#video":
+          urls.append("%s" % ("http://youtu.be/" + search_result["id"]["videoId"]))
+  return urls
 
 def getLibrary():
   token = spotipy.util.prompt_for_user_token(
@@ -19,14 +30,20 @@ def getLibrary():
   offset = 0
   results = sp.current_user_saved_tracks(20, offset)
   library = results
+  '''
   while len(results['items']) == 20:
     offset += 20
     results = sp.current_user_saved_tracks(20, offset)
     library['items'] += results['items']
+  '''
   return library
 
 library = getLibrary()
 
 for item in library['items']:
-    track = item['track']
-    print(track['name'] + ' - ' + track['artists'][0]['name'])
+  track = item['track']
+  query = track['name'] + ' by ' + track['artists'][0]['name']
+  print(query)
+  urls = youtubeSearch(query)
+  for url in urls:
+    print(url)
