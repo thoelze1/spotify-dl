@@ -1,20 +1,15 @@
 #!/usr/bin/env python2.7
 
+from __future__ import unicode_literals
+
 import spotipy
 import spotipy.util
-
 import apiclient.discovery
-
 import youtube_dl
-
 import mutagen.mp3
-
 import urllib
-
 import os
-
 import acrcloud.recognizer
-
 import json
 
 import config
@@ -72,6 +67,7 @@ def addToCollection(title, artist, album, trackno):
 
 def downloadSong(url):
   ydl_opts = {
+    'quiet': True,
     'format': 'bestaudio/best',
     'outtmpl': 'temp.%(ext)s',
     'postprocessors': [{
@@ -103,7 +99,7 @@ def getLibrary():
     print("Can't get token for " + config.username)
     return None
   sp = spotipy.Spotify(auth=token)
-  offset = 20
+  offset = 40
   results = sp.current_user_saved_tracks(10, offset)
   library = results
   '''
@@ -159,5 +155,7 @@ for item in library['items']:
       break
     else:
       continue
-  if not found:
-    print('Failed to find ' + query)
+  if found:
+    print('SUCCESS   ' + query)
+  else:
+    print('FAILURE   ' + query)
