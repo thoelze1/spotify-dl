@@ -65,22 +65,25 @@ def addToCollection(title, artist, album, trackno):
     os.makedirs(path)
   os.rename('temp.mp3', path + '/' + title + '.mp3')
 
+ydl_opts = {
+  'quiet': True,
+  'format': 'bestaudio/best',
+  'outtmpl': 'temp.%(ext)s',
+  'postprocessors': [{
+    'key': 'FFmpegExtractAudio',
+    'preferredcodec': 'mp3',
+    'preferredquality': '192',
+  }],
+}
+
+ydl = youtube_dl.YoutubeDL(ydl_opts)
+
 def downloadSong(url):
-  ydl_opts = {
-    'quiet': True,
-    'format': 'bestaudio/best',
-    'outtmpl': 'temp.%(ext)s',
-    'postprocessors': [{
-      'key': 'FFmpegExtractAudio',
-      'preferredcodec': 'mp3',
-      'preferredquality': '192',
-    }],
-  }
-  with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-    ydl.download([url])
+   ydl.download([url])
+
+youtube = apiclient.discovery.build('youtube','v3',developerKey=config.dev_key)
 
 def youtubeSearch(query):
-  youtube = apiclient.discovery.build('youtube','v3',developerKey=config.dev_key)
   search_response = youtube.search().list(maxResults=4,part="id,snippet",q=query).execute()
   urls = []
   for search_result in search_response.get("items", []):
@@ -99,28 +102,28 @@ def getLibrary():
     print("Can't get token for " + config.username)
     return None
   sp = spotipy.Spotify(auth=token)
-  offset = 40
-  results = sp.current_user_saved_tracks(10, offset)
+  offset = 0
+  results = sp.current_user_saved_tracks(20, offset)
   library = results
-  '''
   while len(results['items']) == 20:
     offset += 20
     results = sp.current_user_saved_tracks(20, offset)
     library['items'] += results['items']
-  '''
   return library
 
+acrconfig = {
+  'host': config.acr_host,
+  'access_key': config.acr_key,
+  'access_secret': config.acr_secret,
+  'timeout': 10
+}
+
+re = acrcloud.recognizer.ACRCloudRecognizer(acrconfig)
+
 def verifyTrack(track, path):
-  acrconfig = {
-    'host': config.acr_host,
-    'access_key': config.acr_key,
-    'access_secret': config.acr_secret,
-    'timeout': 10
-  }
-  re = acrcloud.recognizer.ACRCloudRecognizer(acrconfig)
   obj = json.loads(re.recognize_by_file(path, 0))
-  jsonSuccess = obj['status']['code']
-  if jsonSuccess != 0:
+  status = obj['status']['code']
+  if status != 0:
     return False
   trueArtist = obj['metadata']['music'][0]['artists'][0]['name']
   trueTitle = obj['metadata']['music'][0]['title']
