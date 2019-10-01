@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2.7
 
 import spotipy
 import spotipy.util
@@ -9,7 +9,7 @@ import youtube_dl
 
 import mutagen.mp3
 
-import urllib.request
+import urllib
 
 import os
 
@@ -23,7 +23,7 @@ def downloadArt(track):
     if image['height'] > maxh:
       maxh = image['height']
       bestimg = image
-  urllib.request.urlretrieve(bestimg['url'], 'temp.jpg')
+  urllib.urlretrieve(bestimg['url'], 'temp.jpg')
 
 def addToCollection(title, artist, album, trackno):
   mp3file = mutagen.mp3.MP3('temp.mp3',ID3=mutagen.id3.ID3)
@@ -96,7 +96,7 @@ def getLibrary():
             config.client_secret,
             config.redirect_uri)
   if not token:
-    print("Can't get token for %s" % config.username)
+    print("Can't get token for " + config.username)
     return None
   sp = spotipy.Spotify(auth=token)
   offset = 0
