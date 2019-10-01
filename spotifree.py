@@ -13,6 +13,10 @@ import urllib
 
 import os
 
+import acrcloud.recognizer
+
+import json
+
 import config
 
 def downloadArt(track):
@@ -86,7 +90,7 @@ def youtubeSearch(query):
   for search_result in search_response.get("items", []):
       if search_result["id"]["kind"] == "youtube#video":
           urls.append("%s" % ("http://youtu.be/" + search_result["id"]["videoId"]))
-  return urls[0]
+  return urls
 
 def getLibrary():
   token = spotipy.util.prompt_for_user_token(
@@ -99,7 +103,7 @@ def getLibrary():
     print("Can't get token for " + config.username)
     return None
   sp = spotipy.Spotify(auth=token)
-  offset = 0
+  offset = 20
   results = sp.current_user_saved_tracks(10, offset)
   library = results
   '''
@@ -110,6 +114,30 @@ def getLibrary():
   '''
   return library
 
+def verifyTrack(track, path):
+  acrconfig = {
+    'host': config.acr_host,
+    'access_key': config.acr_key,
+    'access_secret': config.acr_secret,
+    'timeout': 10
+  }
+  re = acrcloud.recognizer.ACRCloudRecognizer(acrconfig)
+  obj = json.loads(re.recognize_by_file(path, 0))
+  jsonSuccess = obj['status']['code']
+  if jsonSuccess != 0:
+    return False
+  trueArtist = obj['metadata']['music'][0]['artists'][0]['name']
+  trueTitle = obj['metadata']['music'][0]['title']
+  trueAlbum = obj['metadata']['music'][0]['album']['name']
+  reqArtist = track['artists'][0]['name']
+  reqTitle = track['name']
+  reqAlbum = track['album']['name']
+  sameArtist = (reqArtist == trueArtist)
+  sameTitle = (reqTitle == trueTitle)
+  sameAlbum = (reqAlbum == trueAlbum)
+  success = (sameArtist and sameTitle) or (sameTitle and sameAlbum) or (sameAlbum and sameArtist)
+  return success
+
 library = getLibrary()
 
 for item in library['items']:
@@ -119,7 +147,17 @@ for item in library['items']:
   album = track['album']['name']
   trackno = str(track['track_number'])
   query = title + ' by ' + artist
-  url = youtubeSearch(query)
-  downloadSong(url)
-  downloadArt(track)
-  addToCollection(title, artist, album, trackno)
+  urls = youtubeSearch(query)
+  found = False
+  for url in urls:
+    downloadSong(url)
+    match = verifyTrack(track,'temp.mp3')
+    if match:
+      found = True
+      downloadArt(track)
+      addToCollection(title, artist, album, trackno)
+      break
+    else:
+      continue
+  if not found:
+    print('Failed to find ' + query)
